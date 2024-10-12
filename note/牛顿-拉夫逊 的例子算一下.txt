@@ -1,0 +1,85 @@
+牛顿-拉夫逊 的例子算一下
+taid
+
+https://github.com/Hleephilip/CSG  可以做到目标区域和非目标区域的高质量融合
+
+非零高斯曲率曲面是不是就是不可展的曲面？
+numpy==1.23.4
+测试
+python GeGnn_standalong.py --mode SSAD --test_file data/test_mesh/bunny.obj --ckpt_path pretrained/ours00500.solver.tar --start_pts 0 --output out/ssad_ours.npy
+
+python GeGnn_standalong.py --mode SSAD --test_file data/test_mesh/Bunny_head.obj --ckpt_path pretrained/ours00500.solver.tar --start_pts 0 --output out/ssad_ours.npy
+
+python GeGnn_standalong.py
+
+out/ssad_ours.npy
+
+训练
+python GnnDist.py --config configs/gnndist_test.yaml
+
+python -m pip install pip==20.2.4 -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+python -m pip install pip==20.2.4 -i http://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com
+
+
+conda config --remove channels https://mirrors.ustc.edu.cn/anaconda/pkgs/main/
+conda config --remove channels https://mirrors.ustc.edu.cn/anaconda/pkgs/free/
+conda config --remove channels https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge/
+
+pip install torch-sparse
+
+pip install torch-cluster
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+有意义的区域分段：
+使用生成有意义区域的分段算法将网格划分为不同的簇（clusters）。
+Edgebreaker算法：
+每个簇使用Edgebreaker算法（Rossignac 1999）进行压缩。与Choe et al. 的方法不同，簇之间的边界是三角条带（triangle strips），而不是wires。这些三角条带也用Edgebreaker算法进行压缩，但边界数据中不嵌入几何信息，所有顶点位置都在每个簇内进行编码。
+
+Choe等（2004, 2009）的算法注重高压缩比和图表之间的连通性编码，而Chen等（2008）的算法侧重于区域分段和三角条带的处理。Yoon和Lindstrom（2007）的方案则结合了随机访问和流式压缩，提供了高效的访问性能，并且最近的扩展支持了几何随机访问，通过压缩包围体层次来增强缓存一致性。
+
+
+
+
+
+
+
+
+基于簇的随机访问压缩：
+结合了随机访问支持的流式网格压缩（Isenburg et al. 2005c）。网格通过顺序访问和分组网格三角形及顶点进行压缩，采用了缓存无关布局（cache-oblivious layout）。
+簇的处理：
+每个簇包含固定数量的三角形（几千个），独立地使用流式网格压缩方案进行压缩。边界顶点的几何信息不会重复：在一个簇中编码一次，然后在其他簇中引用。这样可以减少冗余和提高效率。
+编程接口：
+提供了一个网格访问编程接口，允许通过标识符以低计算成本访问网格的任何元素。实验结果表明，相比于标准流式网格压缩，速度提高了45:1，但相对于Choe et al. [2004] 的方法，压缩开销大约增加了40%。
+扩展到几何随机访问：
+最近，Yoon和Lindstrom [2007] 的方法被扩展到支持几何随机访问，通过压缩由轴对齐包围体（Axis-Aligned Bounding Boxes, AABB）组成的包围体层次（bounding volume hierarchies）。在这个层次中，一个父包围体被分成两个子包围体。压缩旨在保持生成层次的缓存一致性。生成大约4,000个包围体的簇，并独立地进行压缩以实现随机访问。每个叶子包围体的三角形顶点索引被编码，以支持几何随机访问。
+
+pip install torch-spline-conv
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+python -m pip install pip==20.2.4 -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+python -m pip install pip==20.2.4 -i http://pypi.doubanio.com/simple/ --trusted-host pypi.doubanio.com
+增量参数细化框架
+不同于三角形网格，多边形网格需要特殊的压缩算法。初步三角化可以使多边形网格适应三角形网格的压缩算法，但会增加压缩率。
+King 等人的算法扩展了 Edgebreaker 方法，能够高效压缩四边形和混合网格。Face Fixer 和基于度数的方法通过面遍历来压缩连接性，分别在不同程度上提供了高效的压缩率。
+基于度数的连接性编码方法特别有效，并通过理论证明了其最优性。实验结果显示，它们在压缩效率上优于 Face Fixer 方法
+
+生成一个经过给定点的曲线，首先通过插值或者一些基于样条的方法生成初始的曲线，此时可以得到初始曲线的水平集函数f，然后由于E_total = E_shape + w_sdf*E_sdf，通过求函数f 的梯度和拉普拉斯来得到对应的E_shape 和 E_sdf,然后我就不会了
+
+生成一个经过给定点的曲线，通过fast marching方法在窄带内生成初始化的sdf，然后使用牛顿法来迭代更新窄带内顶点的水平集函数的值，以最小化能量函数，能量函数由shape能量和sdf能量组成：sdf能量用来控制sdf 的梯度为1，保证曲线的稳定性，作者修改了sdf正则化项作为sdf能量；shape能量分为interp、obs、smooth和tan组成。interp能量控制曲线经过给定的点；obs能量是一个惩罚项，使曲线远离给定点，离给定点越近，能量值越大，给定点处为1，通过高斯核平滑到0；smooth能量用来控制曲线(水平集函数=0)的平滑度,原始的Willmore energy比较复杂，在sdf中可以使用laplace来代替测地线的曲率，因此willmore能量可以用laplace和水平集函数的积分表示；tan能量用来控制曲线在给定点的切线和法向，切线和法向是垂直的，同时优化两个能量可以达到更好的平衡，更全面地控制曲线的形状，平衡不同的几何特性。可以通过控制法向的朝向，决定生成的曲线在给定点的内部或外部。法向能量作者通过近似能量函数来简化计算，减少复杂度；
+因为狄拉克函数有奇异性，无法用于数值计算，所以使用高斯核来近似狄拉克函数。
+Hessian矩阵矫正（看一下）和L-M方法（没有附录）
+窄带加速这里看一下具体怎么做，在迭代过程中有两种情况会引起窄带区域更新。
+
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+
+matplotlib==3.6.1
+numpy==1.24.2
+PyMCubes==0.1.2
+scikit_learn==1.1.3
+tqdm==4.64.1
+websockets==10.3
+tensorboard
+pygeodesic
+trimesh
+yacs
+polyscope

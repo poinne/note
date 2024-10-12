@@ -1,0 +1,17 @@
+函数定义到顶点上
+拉普拉斯矩阵定义到顶点上（全局）
+曲率
+双边法向滤波 法向迭代，顶点迭代原因
+
+
+
+线性代数
+
+看hidden graph的作用？ 	
+
+先看各种用隐式方式来表示曲线曲面的方法
+Deep SDF
+Deep Level Sets for Salient Object Detection（先看这个方面）
+Nerf Gaussisan Splatting(不是特别相关，看一下，能不能将这些方法应用在局部）
+2D Gaussian Splatting for Geometrically Accurate Radiance Fields
+ 
