@@ -179,10 +179,184 @@ DGM算法的核心思想是通过神经网络近似求解高维偏微分方程�
 
 
 
-##### Mesh PDE
+##### Learning high-order geometric flow based on the level set method
 
-1. 如何在网络中定义mesh上的信号场？
+这篇文章提出了一个新的框架，来求解高阶几何流。然后用提出的框架求解两个GPDE，并用实验验证了该框架在不同的模型上的效果。
 
-2. 如何求解、更新信号场？
+作者将求解PDE问题看作PDE约束的优化问题，结合PINN和LSM，求解高阶的GPDE（几何偏微分方程）
 
-   通过循环图网络进行更新
+【(该框架就是PINN + LSM)，整体的思想和做法和PINN一样，不同点在于：
+
+1. PINN求解的一般都是简单且低阶的PDE，该框架求解的是复杂且高阶的几何流(GPDE)
+2. PINN对数据的需求比较少，只需要初边值即可，该框架则是通过数据驱动。
+3. 
+
+该框架的算法步骤如下：
+
+![image-20241014123255074](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014123255074.png)
+
+其中，梯度下降的公式为：
+
+![image-20241014123452603](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014123452603.png)
+
+需要减去两项，分别是要初边值以及各个约束项。
+
+
+
+###### High-order quasi Xuguo flow
+
+根据相关论文和LSM，可得，需要求解的高阶GPDE为：
+
+![image-20241014130213151](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014130213151.png)
+
+结合LBO公式：（以平均曲率为例）
+
+![image-20241014130256131](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014130256131.png)
+
+可得：
+
+![image-20241014130316462](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014130316462.png)
+
+最终可以得到：
+
+![image-20241014130330326](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014130330326.png)
+
+对于每个$e_i$，第一项为已经预计算出的值，即ground true，第二项为模型预测出的值。
+
+要求解的损失函数为：
+
+![image-20241014130351418](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014130351418.png)
+
+求解过程参考上面的算法1。
+
+
+###### High-order surface diffusion flow of Cahn–Hilliard model
+
+使用LSM和k的高阶LBO来近似表面扩散流，以平滑PDE系统。
+
+引入 Heaviside function：
+
+![image-20241014141347598](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014141347598.png)
+
+new Cahn-Hilliard model reads as:
+
+![image-20241014141437791](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014141437791.png)
+
+
+
+##### Deep Level Sets for Salient Object Detection
+
+这篇论文用一系列卷积层初始化显著图，然后在超像素级别对其进行细化。 水平集损失函数用于帮助学习二进制分割图。
+
+模型的架构如下：
+
+![image-20241014145556029](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241014145556029.png)
+
+首先将图片输出VGG16进行显著性目标检测， 得到检测结果的二值图，将二值图的值水平移动到[-0.5,0.5]，作为初始的水平集，然后通过GSF对结果进行进一步的处理，最终借助Heaviside function，将水平集图转换为最终的显著性图。
+
+**训练过程及输入输出**
+
+首先训练VGG15个epoch，输入为224\*224的图像，通过BCE进行有监督训练，输出为代表显著性的56\*56二值图。
+（水平集初始化）然后使用水平集方法，通过水平集loss对VGG进行无监督的训练（微调），水平集的更新借助自动微分，通过作者得出的对水平集的导数进行。输入为初始化后的水平集图，输出为优化后的水平集图。
+最后将GSF层加入网络，进行最后的微调。输入为缩放到224\*224的水平集图和通过gslicr生成的有400~500个超像素的图，输出为经过过滤后的水平集图。
+
+###### 水平集方法
+
+水平集方法在这篇文章中的用法为：通过损失函数来帮助VGG学习二进制分割图。
+
+水平集在模型中的表示方式为：VGG输出图像上每个像素的标量值经过水平位移到[-0.5,0.5]得到，并作为初始水平集。
+
+作者通过定义水平集的损失函数，来约束和更新图像上的水平集：
+
+![image-20241015094034617](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015094034617.png)
+
+Length(C):
+
+将对曲线的积分转换为对曲面的积分。
+
+![image-20241015094229615](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015094229615.png)
+
+
+
+最后两项强制显著性图在显著区域内部和外部均一致。常数$c_1、c_2$表示内部和外部的显著性均值。
+
+![image-20241015103127712](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015103127712.png)
+
+Heaviside 函数及其导数：
+
+用于将最终的水平集转换为二值图（显著图）。【并不是只进行一次，而是每次训练都会参与】
+
+![image-20241015094255258](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015094255258.png)
+
+H函数会在$z = 0$处发生突变，且其导数只在0处有值，其余位置为0，会在优化过程中陷入局部极小值。作者使用改进的H函数来解决这个问题：
+
+![image-20241015094805744](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015094805744.png)
+
+
+
+Loss对水平集$\phi$的导数为：
+
+![image-20241015103318058](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015103318058.png)
+
+可以借助自动微分求梯度，进行计算。
+
+（这里是自动微分完成，还是编写代码完成？）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+这段内容介绍了**水平集方法（Level Set Method, LSM）**中的曲线演化方程及其推导过程，特别是通过链式法则推导出曲线演化的偏微分方程（PDE）。让我们逐步解释公式 \( 4 \)、\( 5 \)、\( 6 \) 以及公式 \( 6 \) 的推导。
+
+### 1. **公式 (4)**：曲线的演化方程
+\[
+\frac{\partial C(t)}{\partial t} = v n
+\]
+该公式定义了曲线 \( C(t) \) 随时间 \( t \) 的变化。曲线 \( C(t) \) 是随时间演化的边界，在**掩码优化**中，\( C \) 代表分割掩码的边界。
+
+- **\( v \)**：表示曲线沿着法向量 \( n \) 的移动速度，法向量指向曲线的外侧。
+- **\( n = \frac{\nabla \phi}{|\nabla \phi|} \)**：这是单位法向量，表示曲线的法向方向，是通过水平集函数 \( \phi \) 的梯度计算得到的。
+
+### 2. **公式 (5)**：链式法则应用
+\[
+\frac{\partial \phi(C(t), t)}{\partial t} = 0
+\]
+水平集方法使用隐式函数 \( \phi \) 来表示曲线 \( C(t) \) 的边界，假设 \( \phi(C(t), t) = 0 \)，表示曲线上的所有点满足水平集函数为零（即零水平集表示曲线）。根据链式法则，对时间 \( t \) 取导数，得到：
+\[
+\frac{\partial \phi}{\partial C(t)} \cdot \frac{\partial C(t)}{\partial t} + \frac{\partial \phi}{\partial t} = 0
+\]
+其中：
+- \( \frac{\partial \phi}{\partial C(t)} \)：表示 \( \phi \) 对曲线 \( C(t) \) 的导数。
+- \( \frac{\partial C(t)}{\partial t} \)：是曲线随时间的变化率，即公式 (4) 中定义的速度项 \( v n \)。
+
+### 3. **公式 (6)**：结合公式 (4) 和 (5)
+在公式 (5) 中，\(\frac{\partial \phi}{\partial C(t)}\) 表示沿曲线的梯度，等于 \( \nabla \phi \)。结合公式 (4) 中的曲线演化速度 \( \frac{\partial C(t)}{\partial t} = v n \)，我们得到：
+\[
+\frac{\partial \phi}{\partial t} = -v |\nabla \phi|
+\]
+这就是公式 (6)。它是一个偏微分方程（PDE），描述了水平集函数 \( \phi \) 的随时间演化。
+
+- **解释**：曲线的变化是通过水平集函数 \( \phi \) 随时间的演化来描述的。速度 \( v \) 沿法向方向，曲线的演化速度与梯度大小 \( |\nabla \phi| \) 成比例。
+
+### 公式 (6) 的作用：
+- **曲线演化**：水平集方法的核心思想是通过更新水平集函数 \( \phi \) 来隐式追踪曲线的变化。公式 (6) 表明曲线的演化取决于法向速度 \( v \) 和水平集函数的梯度 \( |\nabla \phi| \)。
+- **求解方法**：通过数值方法（例如有限差分法）可以近似求解公式 (6)，以更新水平集函数并演化曲线。
+
+### 总结：
+- 公式 (4) 描述了曲线 \( C(t) \) 随时间 \( t \) 的变化，沿法向量 \( n \) 以速度 \( v \) 演化。
+- 公式 (5) 使用链式法则对水平集函数 \( \phi \) 进行求导，结合曲线的演化速度。
+- 公式 (6) 是最终推导出的水平集函数的演化方程，用来更新水平集函数，追踪曲线的变化。
+
+这种推导方式通过物理上的曲线演化描述，使得水平集方法能够有效处理复杂形状和拓扑结构的分割问题。
