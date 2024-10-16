@@ -229,6 +229,10 @@ DGM算法的核心思想是通过神经网络近似求解高维偏微分方程�
 
 求解过程参考上面的算法1。
 
+对于这个损失函数，我不理解$e_1\sim e_7$这几项的意义，从公式上看，是将复杂的GPDE进行一步一步的分解，分步计算最终的PGDE，$e_1\sim e_7$ 则是每一步产生的误差。
+
+但是前面的一项是怎么来的？代码写的和论文也并不相同，代码中同时对两个要处理的GPDE进行求loss，并且有多项减号前后是相同的。
+
 
 ###### High-order surface diffusion flow of Cahn–Hilliard model
 
@@ -304,13 +308,51 @@ Loss对水平集$\phi$的导数为：
 
 
 
+##### DevelSet: Deep Neural Level Set for Instant Mask Optimization
+
+该文章目的是进行掩码优化
+
+模型由两部分组成，第一部分名为DSN，由ViT作为主干网络，并通过分支网络同时优化两个损失函数，第二部分名为DSO，通过CG对DSN输出的水平集图在GPU上进行优化，得到最终的掩码图。
+
+![image-20241015160037204](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015160037204.png)
+
+训练过程：
+
+1. 作者使用TSDF来作为水平集。
+2. 作者没有使用Fast Matching 来生成初始TSDF，而是自己开发了一种基于 CUDA 并行性特性的 TSDF 算法。（当应用于神经网络创建的复杂掩模时，CUDA_TSDF可以减少98%以上的TSDF计算时间）
+3. 将通过CUDA TSDF算法生成的初始水平集图作为输入，输入DSN。
+4. DSN有两个输出分支，分别用于输出$m_{\theta}$ 矩阵（权重矩阵， 用于后续优化使用）和准优化的水平集图$\phi_{0,\theta}$ 。
+5. DSO以 $\phi_{0,\theta}$ 作为输入，通过CG（共轭梯度法），结合CFL条件在GPU上对水平集图进行优化。其中，DSN输出的$m_{\theta}$用于水平集函数中速度的计算。
 
 
 
+###### DSO（DevelSet-Optimizer）
+
+DSO 的损失由两部分组成：
+
+![image-20241015170536387](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015170536387.png)
+
+第一项：
+
+（ILT校正损失旨在最小化输出标称图像和输入目标之间基于像素的差异）
+
+![image-20241015171555029](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015171555029.png)
+
+第二项：
+
+（最小化 PVBand 的面积，我们期望最小/最大工艺条件下最里面/最外面的晶圆尽可能接近目标图像）
+
+![image-20241015171603753](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015171603753.png)
+
+此时速度为：
+
+![image-20241015171644587](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015171644587.png)
 
 
 
+最终的运动方程为：
 
+![image-20241015171851147](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241015171851147.png)
 
 
 
