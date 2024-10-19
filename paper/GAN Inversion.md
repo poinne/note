@@ -7,7 +7,7 @@
 ### GAN Inversion
 
 <<<<<<< HEAD
-![image-20240423155305172](https://raw.githubusercontent.com/poinne/md-pic/main/image-20240423155305172.png)
+![rrr](https://raw.githubusercontent.com/poinne/md-pic/main/image-20240423155305172.png)
 
 ![image-20240423155425269](https://raw.githubusercontent.com/poinne/md-pic/main/image-20240423155801920.png)
 
