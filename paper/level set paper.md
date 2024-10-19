@@ -567,3 +567,31 @@ DSN通过多分支的输出，同时优化两个损失函数：
    - 对于不在训练集中的模型$M$，需要将根据在该模型上采样到的一些数据进行嵌入向量的训练，之后再进行预测。（因为模型再训练时已经学习到了大量的先验知识，因此只需要输入模型的少量采样点，即可得到较好的嵌入向量$z$, 从而可以预测模型任意位置的sdf值）
 
    <img src="https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019133717175.png" alt="image-20241019133717175" style="zoom:67%;" />
+
+
+
+##### Nerf 了解
+
+传统的3d重建方法：
+
+![image-20241019140348957](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019140348957.png)
+
+
+
+nerf通过体密度来隐式表示3d模型的形状。
+
+<img src="https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019193045247.png" alt="image-20241019193045247" style="zoom:33%;" />
+
+一个训练好的模型只能重建一个三维场景。
+
+![image-20241019154703438](eeee'e)
+
+![image-20241019153541269](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019153541269.png)
+
+![image-20241019153903480](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019153903480.png)
+
+![image-20241019154439388](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019154439388.png)
+
+nerf的训练过程如下：
+
+![image-20241019195804681](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241019195804681.png)
