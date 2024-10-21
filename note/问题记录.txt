@@ -14,4 +14,7 @@ Deep Level Sets for Salient Object Detection（先看这个方面）
 Nerf Gaussisan Splatting(不是特别相关，看一下，能不能将这些方法应用在局部）
 2D Gaussian Splatting for Geometrically Accurate Radiance Fields
 
+看不同模型处理PDE，看时重点关注输入，输出，PDE是动态、静态，以及各种模型求解PDE的主要的优缺点。
+
+
  
