@@ -8,7 +8,7 @@
 
 分类的标准是是否学会满足控制方程或使用方程的解的结果。
 
-- 物理驱动的方法通常会调整深度学习模型，通过最小化控制偏微分方程的残差，为给定的流体动力学问题提供解析和可微分的解决方案。
+- 物理驱动的方法通常会调整深度学习模型，通过**最小化控制偏微分方程的残差**，为给定的流体动力学问题提供解析和可微分的解决方案。
   - 以无监督的方式训练，以获得最小化控制方程残差的解决方案。
   - 可以学习流体动力学单个实例的准确解。
 - 数据驱动方法为任何流体动力学问题提供了快速、近似的解决方案，这些问题与调整深度学习模型参数时使用的观察结果共享一些物理属性。
@@ -17,7 +17,7 @@
 
 ##### Physics-driven neural flow solvers
 
-**修改的 method of weighted residuals (MWR)**
+`修改的 method of weighted residuals (MWR)`
 
 加权残差法（Method of Weighted Residuals, MWR）是一种用于求解偏微分方程（PDE）的数值方法。该方法的基本思想是将PDE的解表示为某种形式的试探函数，并通过引入加权函数，最小化方程在某种意义上的残差。
 
@@ -60,7 +60,7 @@ PINNS可用于解决PDE的正向和逆向问题。
 
 
 
-当前物理驱动求解器的最大问题是收敛速度通常比数值求解器慢，并且PDE的残差仍然比较高。目前也有一些解决方法。
+当前物理驱动求解器的最大问题是收敛速度通常比数值求解器慢，并且PDE的残差仍然比较高。目前也有一些解决方法。【待看】
 
 
 
@@ -76,7 +76,13 @@ PINNS可用于解决PDE的正向和逆向问题。
 
 但是插值性质限制了模型的泛化性能。很多研究目的都是为了减轻这种限制，并将物理知识嵌入到模型中。综述中讨论了四类：
 
+数据驱动部分主要讨论了几种解决流体PDE的方法
 
+###### Data-driven flow inference on structured meshes
+
+
+
+##### 总结
 
 通常使用的模型为CNN、U-net、GNN、RNN。
 
@@ -93,14 +99,6 @@ CNN适合与几何与坐标系对其的模拟
 GNN适合复杂的几何模拟和拉格朗日系统。
 
 
-
-多尺度CNN、GNN是什么
-
-
-
-数据驱动部分主要讨论了几种解决流体PDE的方法
-
-###### Data-driven flow inference on structured meshes
 
 
 
@@ -120,13 +118,13 @@ GNN适合复杂的几何模拟和拉格朗日系统。
 
 ###### DeepONet CNN
 
-DeepONet【待看】【】
+DeepONet【待看】
 
 ![image-20241021212131377](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241021212131377.png)
 
 ###### RNN
 
-PhyCRNet：结合CNN和LSTM求解PDE 【待看】【】
+PhyCRNet：结合CNN和LSTM求解PDE  【论文3】
 
 
 
@@ -156,11 +154,128 @@ Choose a transformer: Fourier or Galerkin
 
 
 
+##### 论文3：PhyCRNet Physics-informed convolutional-recurrent
+
+这篇文章将CNN与RNN(LSTM)结合，并结合物理信息，来求解时空PDEs。
+
+它是一种新的物理信息离散学习策略，用于在**没有任何标记数据的情况下求解偏微分方程**。
+
+模型架构如下：
+
+![image-20241022164355840](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022164355840.png)
+
+**模型**
+
+核心是ConvLSTM模块，相较于传统的LSTM，将门控部分由全连接网络(FC-NN)修改为CNN，以获得更强的空间表示能力。
+
+PDE的初值条件作为模型的一个输入，用于提高模型的泛化能力。
+
+PDE的边界值条件则是在每次循环的输出后直接对边界进行填充。以确保边界条件强制满足。填充的边界值可以通过有限差分进行计算。不同的边界条件填充的也不同（Dirichlet填充常量、Neumann填充内部计算出的值，每个循环不同）【待看】
+
+**训练**
+
+- 数据集生成
+
+  通过数值方法进行数据集的生成（高阶有限差分法和四阶龙格-库塔时间积分），数据集的格式为：![image-20241022200051279](../../../AppData/Roaming/Typora/typora-user-images/image-20241022200051279.png)
+
+  t：代表数值计算时的时间步
+
+  c：通道，对于2d- burgers来说，是u、v两个通道，代表各自方向的速度。
+
+  h、w：代表mesh的宽高
+
+- 模型训练
+
+  模型架构为CNN+RNN，并结合编码器-解码器结构。事先设置好训练时的时间步长度（和数据集生成时的时间步保持一致），CNN编码器用于将当前的状态编码为低维特征【这里的低维是什么意思】，之后通过ConvLSTM根据状态特征和前一步的隐藏特征生成下一步的隐藏特征，再通过解码器得到下一步的状态。
+
+  数据集中的数据只使用初始状态，即只使用时间步为0时的状态。作为输入。
+
+  模型的loss为所求PDE的MSE。对应偏导通过有限差分计算。
+
+  边界进行硬约束，保持边界条件强制满足。具体地：对于Dirichlet边界条件，边界用常量填充（代码没看懂），对于Neumann边界条件：
+
+- 模型推理
+
+  和训练的过程一样，此时可以用数据集中每个时间步的真实数据与预测数据进行可视化对比。
 
 
 
+**模型细节**
+
+使用LSTM的原因：本质上，由于控制门的精细设计，存储单元通过被访问、累积和删除的输入和状态信息来更新。基于这样的设置，普通循环神经网络（RNN）臭名昭著的梯度消失问题得到了缓解。
+
+**ConvLSTM**
+
+ConvLSTM的基本原理是继承LSTM控制信息流的基本结构（即单元和门），并考虑到其更好的空间表示能力，将门控操作中的全连接神经网络（FC-NN）修改为CNN。		
+
+【待补充】
+
+**Pixel shuffle**
+
+目的是将低分辨率（LR）特征图升级为高分辨率（HR）输出。
+
+该部分位于ConvLSTM模块后，通过添加该部分，可使用ConvLSTM对低分辨率的特征图进行时间建模，提高计算效率。
+
+**Network architecture**
+
+![image-20241022205237885](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022205237885.png)
+
+通过有限差分滤波器来求loss的梯度：
+
+<img src="https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022205353019.png" alt="image-20241022205353019" style="zoom:67%;" />
+
+论文中说有限差分滤波器无法处理边界的情况，边界处使用填充方式来进行硬约束。（这里如果不使用硬约束的话，应该可以用前向和后向差分来处理）
+
+与传统数值方向相比，可以采样更大的时间步。
 
 
 
+**Efficient network architecture: PhyCRNet-s**
+
+为了提高计算效率，修改了网络架构，去除了一部分的编码器：
+
+![image-20241022205907888](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022205907888.png)
+
+这种条约编码器方案可能会导致时间传播中的近似误差，为了效率和准确性的平衡，一般将跳跃间隔设为一个较小的值。
 
 
+
+受前向欧拉方案的启发，在输入状态变量$u_i$和输出变量$u_{i+1}$ 之间附加了一个全局残差连接。时刻 $t_i$的学习过程可表述为$u_{i+1} = u_i + \delta t \cdot \mathcal{N}\mathcal{N}[u_i;\theta]$
+
+**loss function**
+
+![image-20241022211032743](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022211032743.png)
+
+![image-20241022211018376](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022211018376.png)
+
+**结果对比**
+
+与PINN方法对比几个方程的结果，在训练的时间步中效果相差不大，但是外推的时间步中，论文提出的模型明显效果好于PINN
+
+![image-20241022211327970](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022211327970.png)
+
+
+
+**模型的泛化**
+
+该模型的泛化主要通过不同的初始值来进行实验，因为PINN将初始值作为loss的一部分，所以泛化能力很差。
+
+这个模型则是将初始值作为输入，初始值的约束可以通过残差连接施加。从而确保模型的泛化性能。
+
+我的课题所用模型可以参考这个模型，即搭建一个特征提取和循环神经网络，并结合物理信息对水平集函数进行求解。（相当于物理驱动的方法）
+
+但是会有很多问题：
+
+1. 模型使用mesh方式进行求解，水平集是否可用mesh方式？
+2. 模型处理的是2D数据，如果涉及到3D的mesh模型，就不能用CNN了。可能需要GNN。这个模型核心的卷积也要大改。
+3. 该模型的泛化性只是通过不同的初值体现，不同的mesh输入能否看作不同的初值？
+
+
+
+**GNN solver PDE**
+
+![image-20241022215417589](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022215417589.png)
+
+![image-20241022215709582](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022215709582.png)
+
+**GAN solver PDE**
