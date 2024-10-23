@@ -154,7 +154,7 @@ Choose a transformer: Fourier or Galerkin
 
 
 
-##### 论文3：PhyCRNet Physics-informed convolutional-recurrent
+#### 论文3：PhyCRNet Physics-informed convolutional-recurrent
 
 这篇文章将CNN与RNN(LSTM)结合，并结合物理信息，来求解时空PDEs。
 
@@ -200,9 +200,9 @@ PDE的边界值条件则是在每次循环的输出后直接对边界进行填�
 
   和训练的过程一样，此时可以用数据集中每个时间步的真实数据与预测数据进行可视化对比。
 
+  
 
-
-**模型细节**
+##### 模型细节
 
 使用LSTM的原因：本质上，由于控制门的精细设计，存储单元通过被访问、累积和删除的输入和状态信息来更新。基于这样的设置，普通循环神经网络（RNN）臭名昭著的梯度消失问题得到了缓解。
 
@@ -232,7 +232,7 @@ ConvLSTM的基本原理是继承LSTM控制信息流的基本结构（即单元�
 
 
 
-**Efficient network architecture: PhyCRNet-s**
+###### Efficient network architecture: PhyCRNet-s
 
 为了提高计算效率，修改了网络架构，去除了一部分的编码器：
 
@@ -250,7 +250,7 @@ ConvLSTM的基本原理是继承LSTM控制信息流的基本结构（即单元�
 
 ![image-20241022211018376](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022211018376.png)
 
-**结果对比**
+###### 结果对比
 
 与PINN方法对比几个方程的结果，在训练的时间步中效果相差不大，但是外推的时间步中，论文提出的模型明显效果好于PINN
 
@@ -258,7 +258,7 @@ ConvLSTM的基本原理是继承LSTM控制信息流的基本结构（即单元�
 
 
 
-**模型的泛化**
+###### 模型的泛化
 
 该模型的泛化主要通过不同的初始值来进行实验，因为PINN将初始值作为loss的一部分，所以泛化能力很差。
 
@@ -274,10 +274,114 @@ ConvLSTM的基本原理是继承LSTM控制信息流的基本结构（即单元�
 
 
 
-**GNN solver PDE**
+#### 论文4：Physics-Embedded Neural Networks: Graph Neural  PDE Solvers with Mixed Boundary Conditions
 
-![image-20241022215417589](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022215417589.png)
+将物理信息嵌入GNN，进行PDE 的学习和预测
 
-![image-20241022215709582](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241022215709582.png)
+特点：
 
-**GAN solver PDE**
+1. 泛化性好，可以处理不同的初值（？）
+2. 严格满足边界条件。可以处理混合边界条件（同时考虑多种边界）
+3. 可以预测很长一段时间后的状态。
+4. 训练时输入是mesh形状的离散数据。
+5. 通过神经非线性求解器（neural nonlinear solver）来在GNN中引入全局连接，以提高模型的表现和预测能力。
+
+
+
+**表示temporal PDE**
+
+D-dimensional temporal PDE 可以如下表示：
+
+![image-20241023192543163](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023192543163.png)
+
+这里的$\mathcal{D}$ 代表微分算子，这里的微分算子可以是复合的微分算子，表示一系列操作。
+
+**离散PDE**
+
+将连续的temporal PDE离散化，形成mesh，然后视为图，作为GNN输入。
+
+对时间进行离散化，可以用隐式欧拉表示：
+
+![image-20241023195352631](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023195352631.png)
+
+可以看作非线性优化问题：
+
+![image-20241023195542275](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023195542275.png)
+
+$\mathcal{R}(v)$是残差，表示 “当前预测的状态” 和 “前一步的状态 + 一个时间步的变化量”  的差值。
+
+目的是使残差$\mathcal{R}(v) = 0$
+
+
+
+**等方差**
+
+等方差（Equivariance）是指在某种变换下，系统或模型的输出会以特定的方式变化。具体来说，如果对输入应用某种变换（例如旋转、平移或反射），而模型的输出也随之以同样的方式进行相应的变换，那么我们就说这个模型是等方差的。
+
+论文参考IsoGCNs，使用等方差来提高模型的泛化和预测能力。
+
+![image-20241023200733627](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023200733627.png)
+
+
+
+**模型架构**
+
+类似于论文论文3中的架构，使用 encode-process-decode 架构，将输入编码后，送入GNN的非线性求解器中进行循环，最后解码输出。
+
+论文中重点关注对边界条件的处理，以确保最终的模型严格满足边界条件。
+
+论文的做法是将边界和内部的数据同时输入编码器和内部数据一起进行处理。
+
+**对于Dirichlet边界条件：**
+
+**编码**
+
+通过编码器将输入的mesh数据编码为特征向量，为了保持边界和内部数据的编码空间相同，对边界数据和内部数据使用相同的编码器。
+
+![image-20241023202827162](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023202827162.png)
+
+**处理**
+
+Barzilai–Borwein 法：类似于梯度下降，区别在于会使用当前步和上一步的梯度来自适应选择步长，而不是固定步长。
+
+使用 Barzilai–Borwein method 来编码空间中求解下面的优化问题：
+
+![image-20241023203824586](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023203824586.png)
+
+自适应的步长为：
+
+![image-20241023204511743](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023204511743.png)
+
+该步长的计算涉及对全局特征向量的运算（点积），所以可以看作是全局池化。
+
+可以考虑到全局的信息。
+
+使用上面的公式，通过 NIsoGCN 近似
+
+<img src="https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023205409970.png" alt="image-20241023205409970" style="zoom:67%;" />
+
+ 中的非线性微分算子 $\mathcal{D}$。
+
+通过Dirichlet层来确保边界条件不变，Dirichlet层如下：
+
+![image-20241023203124497](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023203124497.png)
+
+该层对内部区域没有任意作用，只是强制边界“顶点”固定为$\hat{h_i}$。
+
+最终，模型的状态更新公式为：
+
+![image-20241023205606602](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023205606602.png)
+
+还是不理解这个公式
+
+
+
+**解码**
+
+因为在高维空间中的编码，可能是不可逆的，所以使用伪逆解码器，同时，解码器需要确保解码后的边界信息和编码前相同：
+
+![image-20241023203439273](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241023203439273.png)
+
+
+
+**对于Neumann边界条件**
