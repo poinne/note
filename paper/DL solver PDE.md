@@ -162,6 +162,10 @@ Choose a transformer: Fourier or Galerkin
 
 ![image-20241024223219395](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241024223219395.png)
 
+整理看得有关PDE 的论文，结合之前的lsm，整理出几个方法
+
+
+
 
 
 这篇文章将CNN与RNN(LSTM)结合，并结合物理信息，来求解时空PDEs。
