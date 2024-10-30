@@ -168,7 +168,7 @@ Choose a transformer: Fourier or Galerkin
 
 
 
-这篇文章将CNN与RNN(LSTM)结合，并结合物理信息，来求解时空PDEs。
+这篇文章将CNN与RNN(LSTM)结c合，并结合物理信息，来求解时空PDEs。
 
 它是一种新的物理信息离散学习策略，用于在**没有任何标记数据的情况下求解偏微分方程**。
 
