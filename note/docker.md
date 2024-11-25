@@ -1,5 +1,13 @@
 #### docker 
 
+docker run -it -v $(pwd):/app my_project_image bash 挂载项目到容器中
+
+
+
+
+
+
+
 [入门文档](https://www.ruanyifeng.com/blog/2018/02/docker-tutorial.html)
 
 [docker-hub](https://hub.docker.com/_/python)
@@ -25,6 +33,8 @@
   docker rm <container_id or container_name>
 
   使用容器的 ID 或者名称来停止容器。
+
+- 
 
 - **要指定容器的名称，**你可以使用 `--name` 选项，后跟你想要的容器名称。例如：
 
@@ -53,6 +63,31 @@
   ```
   docker run --name cont_1 -itd -p 8001:8002 ubuntu
   ```
+
+  ```
+  sudo docker run -it --name c_4 --gpus all -v $(pwd):/app -itd -p 2224:22 --privileged image4 /bin/bash
+  
+  ```
+
+  ```
+  // 容器中配置
+  sudo iptables -A INPUT -p tcp --dport 2225 -j ACCEPT
+  ```
+
+  配置wsl端口转发
+
+  ```
+  netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=2224 connectaddress=172.30.131.110 connectport=2224
+  
+  ```
+
+  查看所有端口转发
+
+  ```
+   netsh interface portproxy show all
+  ```
+
+  
 
   参数含义分别为
 

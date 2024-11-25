@@ -80,4 +80,18 @@
 
 不同在于，上篇拓扑损失是用优化的方式，定义了一个可微的拓扑逆映射函数，将k-PD值映射回点。这篇直接通过自动微分来做。
 
+利用每次预测的sdf和立方复形来计算点云的拓扑属性，使用GUDHI的python实现来生成拓扑属性。
+
+立方复形适合处理图像和体素等规则网格状数据，对于三角网格，应该怎么做？用单纯复形？
+
+通过构建过滤（Filtration）来获取持续同调图，定义拓扑损失函数
+
+![image-20241120224750464](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241120224750464.png)
+
+通过逆映射来优化关键点对的生成，进而控制拓扑结构
+
 ![image-20241105223706597](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241105223706597.png)
+
+根据图卷积，通过输入的点云预测PI（持续图像，向量化的持续图），通过MSE来优化模型
+
+![image-20241120231439145](https://raw.githubusercontent.com/poinne/md-pic/main/image-20241120231439145.png)
