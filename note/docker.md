@@ -182,6 +182,25 @@ docker build -t my_name .
 
 
 
+禁用防火墙:
+
+```
+sudo iptables -F
+```
+
+
+
+
+
+```
+sudo /etc/init.d/ssh stop  #server停止ssh服务 
+sudo /etc/init.d/ssh restart  #server重启ssh服务
+
+dpkg -l | grep ssh
+```
+
+
+
 
 
 1. 创建docker 容器
@@ -191,7 +210,11 @@ docker build -t my_name .
 3. 将window的ip地址2227端口和wsl2的ip地址的2227端口映射
 
    ```
-   netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=2227 connectaddress=172.30.131.110 connectport=2227
+   netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=2222 connectaddress=172.30.131.110 connectport=2222
    ```
 
+   ```
+   netsh interface portproxy show all
+   ```
+   
    
